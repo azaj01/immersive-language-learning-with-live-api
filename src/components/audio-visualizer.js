@@ -41,44 +41,65 @@ class AudioVisualizer extends HTMLElement {
         if (!this.active) this.drawIdle();
     }
 
-    async startAudio() {
-        if (this.audioContext) return;
+    /**
+     * Connect an audio source to this visualizer
+     * @param {AudioContext} audioContext 
+     * @param {AudioNode} sourceNode 
+     */
+    connect(audioContext, sourceNode) {
+        if (this.analyser) {
+            this.disconnect();
+        }
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.audioContext = audioContext;
             this.analyser = this.audioContext.createAnalyser();
-            this.source = this.audioContext.createMediaStreamSource(stream);
+            this.analyser.fftSize = 2048;
 
+            this.source = sourceNode;
             this.source.connect(this.analyser);
-            this.analyser.fftSize = 2048; // Higher resolution
+
             const bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(bufferLength);
 
+            this.active = true;
             this.animate();
         } catch (err) {
-            console.error('Error accessing microphone:', err);
+            console.error('Error connecting visualizer:', err);
         }
     }
 
-    stopAudio() {
-        if (this.audioContext) {
-            this.audioContext.close();
-            this.audioContext = null;
-        }
+    disconnect() {
+        this.active = false;
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
+        if (this.source && this.analyser) {
+            // Be careful not to disconnect source from other destinations if fan-out is used
+            // But here we only connected source->analyser, so we can disconnect source->dest?
+            // Actually source.disconnect() disconnects ALL outputs. That's bad.
+            // We should only disconnect source -> analyser.
+            try {
+                this.source.disconnect(this.analyser);
+            } catch (e) {
+                // Ignore if already disconnected
+            }
+        }
+        this.analyser = null;
+        this.source = null;
+        this.audioContext = null;
+        this.drawIdle();
     }
 
     setActive(isActive) {
+        // Legacy support or external control to pause rendering
+        // connect/disconnect manages active state now mostly
         this.active = isActive;
-        if (this.active) {
-            this.startAudio();
-        } else {
-            this.stopAudio();
+        if (!this.active) {
             this.drawIdle();
+        } else {
+            if (this.analyser) this.animate();
         }
     }
 
@@ -86,27 +107,15 @@ class AudioVisualizer extends HTMLElement {
         const { width, height } = this.canvas;
         this.ctx.clearRect(0, 0, width, height);
 
-        const centerX = width / 2;
-        const centerY = height / 2;
-        // Responsive radius: 20% of smallest dimension
-        const baseRadius = Math.min(width, height) * 0.2;
-        const time = Date.now() / 2000;
-
-        const orbs = [
-            { color: '#5c6b48', scale: 1.0, offset: 0 },
-            { color: '#cba36b', scale: 0.9, offset: 2 },
-            { color: '#d96c6c', scale: 0.8, offset: 4 }
-        ];
-
-        orbs.forEach(orb => {
-            const breathing = Math.sin(time + orb.offset) * 5;
-            this.ctx.beginPath();
-            this.ctx.arc(centerX, centerY, Math.max(0, baseRadius * orb.scale + breathing), 0, Math.PI * 2);
-            this.ctx.fillStyle = orb.color;
-            this.ctx.globalAlpha = 0.3; // Elegant transparency
-            this.ctx.fill();
-        });
-        this.ctx.globalAlpha = 1.0; // Reset
+        // Draw a simple straight line in the center when idle
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, height / 2);
+        this.ctx.lineTo(width, height / 2);
+        this.ctx.strokeStyle = '#5c6b48'; // Primary accent color
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.3;
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
     }
 
     animate() {
@@ -116,55 +125,75 @@ class AudioVisualizer extends HTMLElement {
 
         this.analyser.getByteTimeDomainData(this.dataArray);
 
-        // Calculate volume (RMS)
-        let sum = 0;
-        for (let i = 0; i < this.dataArray.length; i++) {
-            const val = (this.dataArray[i] - 128) / 128.0;
-            sum += val * val;
-        }
-        const rms = Math.sqrt(sum / this.dataArray.length);
-        const targetVolume = Math.min(1, rms * 5);
-
-        // Smooth volume
-        this.smoothedVolume = this.smoothedVolume || 0;
-        this.smoothedVolume += (targetVolume - this.smoothedVolume) * 0.1;
-
-        const width = this.canvas.clientWidth;
-        const height = this.canvas.clientHeight;
+        const width = this.canvas.width;
+        const height = this.canvas.height;
         const ctx = this.ctx;
-        const centerX = width / 2;
-        const centerY = height / 2;
-
-        // Responsive logic: Ensure it never clips
-        // Max radius = base + reaction + breathing
-        const minDim = Math.min(width, height);
-        const baseRadius = minDim * 0.15; // Start at 15%
-        const maxReaction = minDim * 0.25; // Max growth is another 25%
 
         ctx.clearRect(0, 0, width, height);
 
-        const orbs = [
-            { color: '#5c6b48', scale: 1.2, speed: 0.5 },
-            { color: '#cba36b', scale: 1.0, speed: 0.7 },
-            { color: '#d96c6c', scale: 0.8, speed: 0.3 }
-        ];
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#5c6b48'; // Primary accent color
+        ctx.beginPath();
 
-        orbs.forEach((orb, i) => {
-            ctx.beginPath();
+        // Configuration for "Guitar String" effect
+        const pointsCount = 20; // Number of control points (lower = smoother curve)
+        const lerpFactor = 0.3; // Smoothing factor (higher = faster response)
+        const amplitudeScale = 10.0; // Scale up the vibration significantly
 
-            // Dynamic radius
-            const reaction = this.smoothedVolume * maxReaction * orb.scale;
-            const breathing = Math.sin(Date.now() / 1000 * orb.speed + i) * (minDim * 0.02); // 2% breathing
+        // Initialize points array if not exists
+        if (!this.points || this.points.length !== pointsCount) {
+            this.points = new Array(pointsCount).fill(0);
+        }
 
-            const r = baseRadius * orb.scale + reaction + breathing;
+        const sliceWidth = width / (pointsCount - 1);
 
-            ctx.arc(centerX, centerY, Math.max(0, r), 0, Math.PI * 2);
-            ctx.fillStyle = orb.color;
-            ctx.globalAlpha = 0.4; // Slightly more visible when active
-            ctx.fill();
-        });
+        // Calculate target positions based on audio data
+        // We skip through the buffer to get 'pointsCount' samples
+        const bufferStep = Math.floor(this.dataArray.length / pointsCount);
 
-        ctx.globalAlpha = 1.0;
+        for (let i = 0; i < pointsCount; i++) {
+            // Get raw audio value (0-255)
+            const audioIndex = Math.min(i * bufferStep, this.dataArray.length - 1);
+            let val = (this.dataArray[audioIndex] / 128.0) - 1.0; // Range -1 to 1
+
+            // Apply specific "Guitar String" windowing: 
+            // Fixed at ends (i=0, i=max), max in middle.
+            // Using a simple sine half-wave.
+            const normalization = i / (pointsCount - 1); // 0 to 1
+            const window = Math.sin(normalization * Math.PI); // 0 -> 1 -> 0
+
+            // Target Y offset from center
+            const targetY = val * (height * 0.4) * amplitudeScale * window;
+
+            // Apply LERP smoothing to reduce jitter
+            this.points[i] += (targetY - this.points[i]) * lerpFactor;
+        }
+
+        // Draw the curve
+        // Start at left center (fixed)
+        ctx.moveTo(0, height / 2);
+
+        // We use quadratic curves between midpoints for extra smoothness
+        for (let i = 0; i < pointsCount; i++) {
+            const x = i * sliceWidth;
+            const y = (height / 2) + this.points[i];
+
+            // Use Quadratic curves for fluid line
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                const prevX = (i - 1) * sliceWidth;
+                const prevY = (height / 2) + this.points[i - 1];
+                const cx = (prevX + x) / 2;
+                const cy = (prevY + y) / 2;
+                ctx.quadraticCurveTo(prevX, prevY, cx, cy);
+            }
+        }
+
+        // Ensure we connect to the very end
+        ctx.lineTo(width, height / 2);
+
+        ctx.stroke();
     }
 }
 

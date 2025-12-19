@@ -4,12 +4,32 @@
 cleanup() {
     echo ""
     echo "🛑 Stopping services..."
-    # Kill all child processes in the same process group (ignoring the script's own PID if possible, but simplest is jobs)
-    # Using 'jobs -p' to get PIDs of background jobs started by this shell
+    
+    # Get all child PIDs of this shell
     pids=$(jobs -p)
+    
     if [ -n "$pids" ]; then
-        kill $pids 2>/dev/null
+        echo "   Sending SIGTERM to: $pids"
+        kill -TERM $pids 2>/dev/null
+        
+        # Wait for processes to exit (max 5 seconds)
+        for i in {1..5}; do
+            if ! kill -0 $pids 2>/dev/null; then
+                break
+            fi
+            sleep 1
+        done
+        
+        # Force kill if still running
+        if kill -0 $pids 2>/dev/null; then
+            echo "   Force killing remaining processes..."
+            kill -KILL $pids 2>/dev/null
+        fi
     fi
+    
+    # extra safety: try to kill the uvicorn process found by port if it still exists
+    lsof -ti:8000 | xargs kill -9 2>/dev/null
+    
     exit
 }
 

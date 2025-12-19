@@ -17,100 +17,156 @@ class ViewMissions extends HTMLElement {
             <option>🇷🇺 Russian</option>
             <option>🇳🇱 Dutch</option>
             <option>🇵🇱 Polish</option>
+            <option>🇧🇩 Bengali</option>
+            <option>🇮🇳 Marathi</option>
+            <option>🇮🇳 Tamil</option>
+            <option>🇮🇳 Telugu</option>
             <option>🇹🇭 Thai</option>
             <option>🇹🇷 Turkish</option>
             <option>🇻🇳 Vietnamese</option>
             <option>🇷🇴 Romanian</option>
             <option>🇺🇦 Ukrainian</option>
-            <option>🇧🇩 Bengali</option>
-            <option>🇮🇳 Marathi</option>
-            <option>🇮🇳 Tamil</option>
-            <option>🇮🇳 Telugu</option>
+            <option>🧑‍🔬 Science Jargon</option>
+  
     `;
 
     this.innerHTML = `
       <div class="container">
         <h2 style="margin-top: var(--spacing-xl);">Select Mission</h2>
         
-        <div style="margin-bottom: var(--spacing-lg); display: flex; align-items: center; gap: var(--spacing-sm);">
-          <div style="flex: 1;">
-            <label style="display: block; font-size: 0.8rem; margin-bottom: 4px; opacity: 0.7;">From (Native)</label>
-            <select id="from-lang" style="
-              width: 100%;
-              padding: var(--spacing-md);
-              border: 1px solid #ccc;
-              border-radius: var(--radius-md);
-              background: transparent;
-              font-family: var(--font-body);
-              font-size: 1rem;
-              appearance: none;
-            ">
-              ${options}
-            </select>
-          </div>
-
-          <div style="font-size: 1.2rem; margin-top: 20px; opacity: 0.5;">→</div>
-
-          <div style="flex: 1;">
-            <label style="display: block; font-size: 0.8rem; margin-bottom: 4px; opacity: 0.7;">To (Target)</label>
-            <select id="to-lang" style="
-              width: 100%;
-              padding: var(--spacing-md);
-              border: 1px solid #ccc;
-              border-radius: var(--radius-md);
-              background: transparent;
-              font-family: var(--font-body);
-              font-size: 1rem;
-              appearance: none;
-            ">
-              ${options}
-            </select>
-          </div>
-        </div>
-
-        <div style="margin-bottom: var(--spacing-lg);">
-        <div style="margin-bottom: var(--spacing-lg);">
-            <div style="display: flex; gap: var(--spacing-md);">
-                <button id="mode-teacher" class="mode-btn" style="
-                    flex: 1;
-                    padding: var(--spacing-lg);
-                    border-radius: var(--radius-lg);
-                    border: 2px solid transparent;
-                    background: #f5f5f5;
-                    cursor: pointer;
-                    display: flex; flex-direction: column; align-items: center; gap: var(--spacing-sm);
-                    transition: all 0.2s;
-                    text-align: center;
-                ">
-                    <span style="font-size: 2rem;">🧑‍🏫</span>
-                    <span style="font-weight: bold; font-size: 1.1rem;">Teacher Mode</span>
-                    <span style="font-size: 0.85rem; opacity: 0.7; line-height: 1.4;">
-                        Helpful explanations, native language allowed. No grading.
-                    </span>
-                </button>
-
-                <button id="mode-immersive" class="mode-btn" style="
-                    flex: 1;
-                    padding: var(--spacing-lg);
-                    border-radius: var(--radius-lg);
-                    border: 2px solid transparent;
-                    background: #f5f5f5;
-                    cursor: pointer;
-                    display: flex; flex-direction: column; align-items: center; gap: var(--spacing-sm);
-                    transition: all 0.2s;
-                    text-align: center;
-                ">
-                    <span style="font-size: 2rem;">🎭</span>
-                    <span style="font-weight: bold; font-size: 1.1rem;">Immersive Mode</span>
-                    <span style="font-size: 0.85rem; opacity: 0.7; line-height: 1.4;">
-                        Strict roleplay, graded, no native language allowed.
-                    </span>
-                </button>
+        <div style="
+          margin-bottom: var(--spacing-lg); 
+          background: white; 
+          padding: var(--spacing-lg); 
+          border-radius: var(--radius-lg); 
+          border: 1px solid #ddd;
+          box-shadow: var(--shadow-sm);
+        ">
+          <label style="display: block; font-weight: bold; margin-bottom: var(--spacing-md); color: var(--color-accent-primary);">Target Language</label>
+          
+          <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+            <div style="flex: 1;">
+              <label style="display: block; font-size: 0.8rem; margin-bottom: 4px; opacity: 0.7;">I speak (Native)</label>
+              <select id="from-lang" style="
+                width: 100%;
+                padding: var(--spacing-md);
+                border: 2px solid #eee;
+                border-radius: var(--radius-md);
+                background: #f9f9f9;
+                font-family: var(--font-body);
+                font-size: 1rem;
+                appearance: none;
+                cursor: pointer;
+              ">
+                ${options}
+              </select>
             </div>
+
+            <div style="font-size: 1.2rem; margin-top: 20px; opacity: 0.3;">→</div>
+
+            <div style="flex: 1;">
+              <label style="display: block; font-size: 0.8rem; margin-bottom: 4px; opacity: 0.7;">I want to practice</label>
+              <select id="to-lang" style="
+                width: 100%;
+                padding: var(--spacing-md);
+                border: 2px solid var(--color-accent-secondary);
+                border-radius: var(--radius-md);
+                background: white;
+                font-family: var(--font-body);
+                font-size: 1.1rem;
+                font-weight: bold;
+                appearance: none;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(203, 163, 107, 0.2);
+              ">
+                ${options}
+              </select>
+            </div>
+          </div>
+
+          <div style="height: 1px; background: #eee; margin: var(--spacing-lg) 0;"></div>
+
+          <label style="display: block; font-weight: bold; margin-bottom: var(--spacing-md); color: var(--color-accent-primary);">Mode</label>
+
+          <div style="display: flex; gap: var(--spacing-md);">
+              <button id="mode-teacher" class="mode-btn" style="
+                  flex: 1;
+                  padding: var(--spacing-sm) var(--spacing-md);
+                  border-radius: var(--radius-lg);
+                  border: 2px solid transparent;
+                  background: transparent;
+                  cursor: pointer;
+                  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: var(--spacing-sm);
+                  transition: all 0.2s;
+                  text-align: left;
+              ">
+                  <span style="font-size: 1.5rem;">🧑‍🏫</span>
+                  <div>
+                      <span style="font-weight: bold; font-size: 1rem; display: block;">Teacher</span>
+                      <span style="font-size: 0.75rem; opacity: 0.7; line-height: 1.2; display: block;">
+                          Helpful explanations, native allowed.
+                      </span>
+                  </div>
+              </button>
+
+              <button id="mode-immersive" class="mode-btn" style="
+                  flex: 1;
+                  padding: var(--spacing-sm) var(--spacing-md);
+                  border-radius: var(--radius-lg);
+                  border: 2px solid transparent;
+                  background: transparent;
+                  cursor: pointer;
+                  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: var(--spacing-sm);
+                  transition: all 0.2s;
+                  text-align: left;
+              ">
+                  <span style="font-size: 1.5rem;">🎭</span>
+                   <div>
+                      <span style="font-weight: bold; font-size: 1rem; display: block;">Immersive</span>
+                      <span style="font-size: 0.75rem; opacity: 0.7; line-height: 1.2; display: block;">
+                          Graded, strict roleplay.
+                      </span>
+                  </div>
+              </button>
+          </div>
         </div>
+
+
 
         <div class="missions-list">
           <!-- Missions will be injected here -->
+        </div>
+
+        <div style="
+            margin-top: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-xl);
+            background: linear-gradient(135deg, rgba(var(--color-accent-primary-rgb), 0.1) 0%, rgba(var(--color-accent-secondary-rgb), 0.1) 100%);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            border: 1px dashed var(--color-accent-primary);
+        ">
+            <h3 style="margin-bottom: var(--spacing-sm); color: var(--color-accent-primary);"> Build Your Own Version </h3>
+            <p style="margin-bottom: var(--spacing-lg); opacity: 0.8; line-height: 1.5;">
+                Add more missions or features <br>
+            </p>
+            
+            <a href="https://github.com/ZackAkil/immersive-language-learning-with-live-api" target="_blank" style="
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background: white;
+                color: var(--color-text-primary);
+                padding: var(--spacing-md) var(--spacing-lg);
+                border-radius: var(--radius-full);
+                text-decoration: none;
+                font-weight: bold;
+                box-shadow: var(--shadow-sm);
+                transition: transform 0.2s;
+            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                Fork on GitHub
+            </a>
         </div>
       </div>
     `;
@@ -146,18 +202,20 @@ class ViewMissions extends HTMLElement {
       // Reset styles
       [modeTeacher, modeImmersive].forEach(btn => {
         btn.style.borderColor = 'transparent';
-        btn.style.background = '#f5f5f5';
+        btn.style.background = 'transparent';
         btn.style.transform = 'scale(1)';
         btn.style.boxShadow = 'none';
+        btn.style.opacity = '0.5'; // Inactive state
       });
 
       const activeBtn = currentMode === 'immergo_teacher' ? modeTeacher : modeImmersive;
 
       // Active style
-      activeBtn.style.borderColor = 'var(--color-accent-primary)';
-      activeBtn.style.background = 'white'; // or a light tint
-      activeBtn.style.transform = 'scale(1.02)';
+      activeBtn.style.borderColor = 'var(--color-accent-secondary)';
+      activeBtn.style.background = 'white';
+      activeBtn.style.transform = 'scale(1)';
       activeBtn.style.boxShadow = 'var(--shadow-md)';
+      activeBtn.style.opacity = '1';
     };
 
     modeImmersive.addEventListener('click', () => {

@@ -1,4 +1,5 @@
 import './audio-visualizer.js';
+import './live-transcript.js';
 import { GeminiLiveAPI, MultimodalLiveResponseType, FunctionCallDefinition } from '../lib/gemini-live/geminilive.js';
 import { AudioStreamer, AudioPlayer } from '../lib/gemini-live/mediaUtils.js';
 
@@ -38,8 +39,29 @@ class ViewChat extends HTMLElement {
         if (!this._mission) return; // Wait for mission prop
 
         this.innerHTML = `
-      <div class="container" style="justify-content: space-between;">
+
+ <button id="back-to-missions" style="
+            position: absolute;
+            top: var(--spacing-md);
+            left: var(--spacing-md);
+            background: transparent;
+            float: left;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            z-index: 10;
+        " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
+
+      <div class="container" style="justify-content: space-between; min-height: 100vh; position: relative; padding-bottom: var(--spacing-xl);">
         
+       
+
         <div style="margin-top: var(--spacing-xl); text-align: center;">
           <h2 style="font-size: 1.5rem; margin-bottom: var(--spacing-xs);">${this._mission.target_role || 'Target Person'}</h2>
           <div style="
@@ -73,8 +95,23 @@ class ViewChat extends HTMLElement {
           ` : ''}
         </div>
 
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-          <audio-visualizer></audio-visualizer>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: ${this._mode === 'immergo_teacher' ? 'space-between' : 'center'}; width: 100%; gap: ${this._mode === 'immergo_teacher' ? '10px' : '40px'};">
+          <!-- Model Visualizer (Top) -->
+          <div style="width: 100%; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+             <audio-visualizer id="model-viz"></audio-visualizer>
+          </div>
+          
+          <!-- Transcript (Middle) -->
+          ${this._mode === 'immergo_teacher' ? `
+            <div style="width: 100%; height: 250px; margin: 10px 0; position: relative;">
+              <live-transcript></live-transcript>
+            </div>
+          ` : ''}
+
+          <!-- User Visualizer (Bottom) -->
+           <div style="width: 100%; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+             <audio-visualizer id="user-viz"></audio-visualizer>
+          </div>
         </div>
 
         <div style="margin-bottom: var(--spacing-xxl); display: flex; flex-direction: column; gap: var(--spacing-lg); align-items: center;">
@@ -102,50 +139,8 @@ class ViewChat extends HTMLElement {
              height: 1.2em;
              transition: all 0.3s ease;
            "></p>
-
-             <button id="end-btn" style="
-            background: transparent;
-            color: var(--color-danger);
-            padding: var(--spacing-sm);
-            margin-top: var(--spacing-lg);
-            width: auto; height: auto;
-            font-size: 0.9rem;
-            opacity: 0.8;
-            display: flex; align-items: center; gap: 4px;
-          ">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
-            End Session
-          </button>
-       
         </div>
 
-        <!-- Confirmation Dialog -->
-        <div id="confirm-dialog" class="hidden" style="
-            position: fixed; inset: 0; 
-            background: rgba(255,255,255,0.9); 
-            backdrop-filter: blur(4px);
-            z-index: 10;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        ">
-            <div style="text-align: center; padding: var(--spacing-lg);">
-                <h3 style="margin-bottom: var(--spacing-md);">End Session?</h3>
-                <p style="margin-bottom: var(--spacing-lg);">Are you sure you want to stop?</p>
-                <div style="display: flex; gap: var(--spacing-md);">
-                    <button id="cancel-end" style="
-                        padding: var(--spacing-sm) var(--spacing-lg);
-                        border: 1px solid var(--color-text-sub);
-                        border-radius: var(--radius-full);
-                        background: transparent;
-                    ">Cancel</button>
-                    <button id="confirm-end" style="
-                        padding: var(--spacing-sm) var(--spacing-lg);
-                        background: var(--color-danger);
-                        color: white;
-                        border-radius: var(--radius-full);
-                    ">End Session</button>
-                </div>
-            </div>
-        </div>
         <!-- Rate Limit Dialog -->
         <div id="rate-limit-dialog" class="hidden" style="
             position: fixed; inset: 0; 
@@ -189,24 +184,6 @@ class ViewChat extends HTMLElement {
       </div>
     `;
 
-        const endBtn = this.querySelector('#end-btn');
-        const confirmDialog = this.querySelector('#confirm-dialog');
-        const cancelEndBtn = this.querySelector('#cancel-end');
-        const confirmEndBtn = this.querySelector('#confirm-end');
-
-        // Show confirmation
-        endBtn.addEventListener('click', () => {
-            confirmDialog.classList.remove('hidden');
-            // Use flex because 'hidden' sets display: none in style.css, but we want flex centered
-            confirmDialog.style.display = 'flex';
-        });
-
-        // Cancel
-        cancelEndBtn.addEventListener('click', () => {
-            confirmDialog.classList.add('hidden');
-            confirmDialog.style.display = 'none';
-        });
-
         const rateLimitDialog = this.querySelector('#rate-limit-dialog');
         const closeRateLimitBtn = this.querySelector('#close-rate-limit');
 
@@ -221,6 +198,13 @@ class ViewChat extends HTMLElement {
             if (this.audioStreamer) this.audioStreamer.stop();
             if (this.client) this.client.disconnect();
             if (this.audioPlayer) this.audioPlayer.interrupt(); // Stop playback
+
+            // Disconnect visualizers
+            const userViz = this.querySelector('#user-viz');
+            const modelViz = this.querySelector('#model-viz');
+            if (userViz && userViz.disconnect) userViz.disconnect();
+            if (modelViz && modelViz.disconnect) modelViz.disconnect();
+
             console.log("👋 [App] Session ended by user");
 
             // Incomplete session
@@ -234,11 +218,29 @@ class ViewChat extends HTMLElement {
             }));
         };
 
-        // Confirm
-        confirmEndBtn.addEventListener('click', doEndSession);
+        // Back Button
+        const backBtn = this.querySelector('#back-to-missions');
+        backBtn.addEventListener('click', () => {
+            // Stop session if active
+            if (this.audioStreamer) this.audioStreamer.stop();
+            if (this.client) this.client.disconnect();
+            if (this.audioPlayer) this.audioPlayer.interrupt();
+
+            const userViz = this.querySelector('#user-viz');
+            const modelViz = this.querySelector('#model-viz');
+            if (userViz && userViz.disconnect) userViz.disconnect();
+            if (modelViz && modelViz.disconnect) modelViz.disconnect();
+
+            // Navigate back to mission selector
+            this.dispatchEvent(new CustomEvent('navigate', {
+                bubbles: true,
+                detail: { view: 'mission-selector' }
+            }));
+        });
 
         // Animate visualizer on click
-        const viz = this.querySelector('audio-visualizer');
+        const userViz = this.querySelector('#user-viz');
+        const modelViz = this.querySelector('#model-viz');
         const micBtn = this.querySelector('#mic-btn');
         const statusEl = this.querySelector('#connection-status');
         let isSpeaking = false;
@@ -322,12 +324,26 @@ class ViewChat extends HTMLElement {
                 this.audioPlayer.play(response.data);
             } else if (response.type === MultimodalLiveResponseType.TURN_COMPLETE) {
                 console.log("✅ [Gemini] Turn complete");
+                const transcriptEl = this.querySelector('live-transcript');
+                if (transcriptEl) {
+                    transcriptEl.finalizeAll();
+                }
             } else if (response.type === MultimodalLiveResponseType.TOOL_CALL) {
                 console.log("🛠️ [Gemini] Tool Call received:", response.data);
                 if (response.data.functionCalls) {
                     response.data.functionCalls.forEach(fc => {
                         this.client.callFunction(fc.name, fc.args);
                     });
+                }
+            } else if (response.type === MultimodalLiveResponseType.INPUT_TRANSCRIPTION) {
+                const transcriptEl = this.querySelector('live-transcript');
+                if (transcriptEl) {
+                    transcriptEl.addInputTranscript(response.data.text, response.data.finished);
+                }
+            } else if (response.type === MultimodalLiveResponseType.OUTPUT_TRANSCRIPTION) {
+                const transcriptEl = this.querySelector('live-transcript');
+                if (transcriptEl) {
+                    transcriptEl.addOutputTranscript(response.data.text, response.data.finished);
                 }
             }
         };
@@ -347,24 +363,22 @@ class ViewChat extends HTMLElement {
             if (isSpeaking) {
                 // Change to Stop/Listening state
                 micBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-                    <span style="margin-left: 8px;">Stop Session</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    <span style="margin-left: 8px;">End Mission</span>
                 `;
                 micBtn.style.flexDirection = 'row';
+                micBtn.style.background = 'var(--color-danger)'; // Red for end
             } else {
-                // Revert to Start state
-                micBtn.innerHTML = `
-                    <span style="font-size: 1.2rem; font-weight: bold; margin-bottom: 4px;">Start Mission</span>
-                    <span style="font-size: 0.8rem; opacity: 0.9;">You start the conversation!</span>
-                `;
-                micBtn.style.flexDirection = 'column';
+                // Was active, so stopping now
+                doEndSession();
+                return; // Stop here, don't execute start logic
             }
 
             if (isSpeaking) {
                 console.log("🎙️ [App] Microphone button clicked: Starting session...");
                 statusEl.textContent = "Connecting...";
                 statusEl.style.color = "var(--color-text-sub)";
-                viz.setActive(true);
+                // Viz active handled by connection now
 
                 try {
 
@@ -432,6 +446,15 @@ When the user has successfully achieved the mission objective declared in the sc
                     console.log("📝 [App] Setting system instructions for", language, "Mode:", mode);
                     this.client.setSystemInstructions(systemInstruction);
 
+                    // Configure Transcription based on Mode
+                    if (mode === 'immergo_teacher') {
+                        this.client.setInputAudioTranscription(true);
+                        this.client.setOutputAudioTranscription(true);
+                    } else {
+                        this.client.setInputAudioTranscription(false);
+                        this.client.setOutputAudioTranscription(false);
+                    }
+
                     // 1. Connect to WebSocket
                     console.log("🔌 [App] Connecting to backend...");
 
@@ -447,7 +470,8 @@ When the user has successfully achieved the mission objective declared in the sc
                         // For now, let's stop to be safe.
                         isSpeaking = false;
                         micBtn.style.background = 'var(--color-accent-primary)';
-                        viz.setActive(false);
+                        userViz.disconnect();
+                        modelViz.disconnect();
                         statusEl.textContent = "";
                         return;
                     }
@@ -458,9 +482,19 @@ When the user has successfully achieved the mission objective declared in the sc
                     console.log("🎤 [App] Starting audio stream...");
                     await this.audioStreamer.start();
 
+                    // Connect User Visualizer
+                    if (this.audioStreamer.audioContext && this.audioStreamer.source) {
+                        userViz.connect(this.audioStreamer.audioContext, this.audioStreamer.source);
+                    }
+
                     // 3. Initialize Audio Player
                     console.log("🔊 [App] Initializing audio player...");
                     await this.audioPlayer.init();
+
+                    // Connect Model Visualizer
+                    if (this.audioPlayer.audioContext && this.audioPlayer.gainNode) {
+                        modelViz.connect(this.audioPlayer.audioContext, this.audioPlayer.gainNode);
+                    }
 
                     console.log("✨ [App] Session active!");
                     statusEl.textContent = "Connected and ready to speak";
@@ -484,7 +518,8 @@ When the user has successfully achieved the mission objective declared in the sc
                     `;
                     micBtn.style.flexDirection = 'column';
 
-                    viz.setActive(false);
+                    userViz.disconnect();
+                    modelViz.disconnect();
                     statusEl.textContent = "";
 
                     if (err.status === 429) {
@@ -495,16 +530,6 @@ When the user has successfully achieved the mission objective declared in the sc
                     }
                 }
 
-            } else {
-                console.log("🛑 [App] Microphone button clicked: Stopping session...");
-                viz.setActive(false);
-                statusEl.textContent = "";
-
-                // Stop everything
-                this.audioStreamer.stop();
-                this.client.disconnect();
-                // AudioPlayer doesn't strictly need stopping but good to know
-                console.log("👋 [App] Session ended");
             }
         });
     }

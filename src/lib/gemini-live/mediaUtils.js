@@ -73,10 +73,10 @@ export class AudioStreamer {
       };
 
       // Connect the audio graph
-      const source = this.audioContext.createMediaStreamSource(
+      this.source = this.audioContext.createMediaStreamSource(
         this.mediaStream
       );
-      source.connect(this.audioWorklet);
+      this.source.connect(this.audioWorklet);
 
       this.isStreaming = true;
       console.log("🎤 Audio streaming started");

@@ -36,6 +36,9 @@ class GeminiLive:
         """
         Connects to Gemini Live and proxies data between queues/callbacks and the session.
         """
+
+        print("⚡️ setup_config", json.dumps(setup_config, indent=4))
+
         config_args = {
             "response_modalities": [types.Modality.AUDIO]
         }
@@ -87,6 +90,14 @@ class GeminiLive:
                         config_args["tools"] = [types.Tool(function_declarations=fds)]
                 except Exception as e:
                     logger.warning(f"Error parsing tools config: {e}")
+
+        # Config output transcription
+        if "output_audio_transcription" in setup_config:
+            print("💬 output_audio_transcription ENABLED")
+            config_args["output_audio_transcription"] = types.AudioTranscriptionConfig()
+        if "input_audio_transcription" in setup_config:
+            print("💬 input_audio_transcription ENABLED")
+            config_args["input_audio_transcription"] = types.AudioTranscriptionConfig()
 
         config = types.LiveConnectConfig(**config_args)
         
@@ -147,18 +158,19 @@ class GeminiLive:
                                         "serverContent": {
                                             "inputTranscription": {
                                                 "text": server_content.input_transcription.text,
-                                                "isFinal": True 
+                                                "finished": True 
                                             }
                                         }
                                     })
                                 
                                 if server_content.output_transcription:
                                     # Model output transcription
+                                    print("output_transcription", server_content.output_transcription)
                                     await event_queue.put({
                                         "serverContent": {
                                             "outputTranscription": {
                                                 "text": server_content.output_transcription.text,
-                                                "isFinal": True
+                                                "finished": True
                                             }
                                         }
                                     })
