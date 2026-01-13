@@ -1,44 +1,48 @@
-import './audio-visualizer.js';
-import './live-transcript.js';
-import { GeminiLiveAPI, MultimodalLiveResponseType, FunctionCallDefinition } from '../lib/gemini-live/geminilive.js';
-import { AudioStreamer, AudioPlayer } from '../lib/gemini-live/mediaUtils.js';
+import "./audio-visualizer.js";
+import "./live-transcript.js";
+import {
+  GeminiLiveAPI,
+  MultimodalLiveResponseType,
+  FunctionCallDefinition,
+} from "../lib/gemini-live/geminilive.js";
+import { AudioStreamer, AudioPlayer } from "../lib/gemini-live/mediaUtils.js";
 
 class ViewChat extends HTMLElement {
-    constructor() {
-        super();
-        this._mission = null;
-    }
+  constructor() {
+    super();
+    this._mission = null;
+  }
 
-    set mission(value) {
-        this._mission = value;
-        this.render();
-    }
+  set mission(value) {
+    this._mission = value;
+    this.render();
+  }
 
-    set language(value) {
-        this._language = value;
-    }
+  set language(value) {
+    this._language = value;
+  }
 
-    set fromLanguage(value) {
-        this._fromLanguage = value;
-    }
+  set fromLanguage(value) {
+    this._fromLanguage = value;
+  }
 
-    set mode(value) {
-        this._mode = value;
-    }
+  set mode(value) {
+    this._mode = value;
+  }
 
-    connectedCallback() {
-        this.render();
-    }
+  connectedCallback() {
+    this.render();
+  }
 
-    disconnectedCallback() {
-        if (this.audioStreamer) this.audioStreamer.stop();
-        if (this.client) this.client.disconnect();
-    }
+  disconnectedCallback() {
+    if (this.audioStreamer) this.audioStreamer.stop();
+    if (this.client) this.client.disconnect();
+  }
 
-    render() {
-        if (!this._mission) return; // Wait for mission prop
+  render() {
+    if (!this._mission) return; // Wait for mission prop
 
-        this.innerHTML = `
+    this.innerHTML = `
 
  <button id="back-to-missions" style="
             position: absolute;
@@ -63,7 +67,9 @@ class ViewChat extends HTMLElement {
        
 
         <div style="margin-top: var(--spacing-xl); text-align: center;">
-          <h2 style="font-size: 1.5rem; margin-bottom: var(--spacing-xs);">${this._mission.target_role || 'Target Person'}</h2>
+          <h2 style="font-size: 1.5rem; margin-bottom: var(--spacing-xs);">${
+            this._mission.target_role || "Target Person"
+          }</h2>
           <div style="
             background: rgba(var(--color-accent-secondary-rgb), 0.1); 
             border: 1px solid var(--color-accent-secondary);
@@ -73,10 +79,16 @@ class ViewChat extends HTMLElement {
             margin-top: var(--spacing-md);
             max-width: 800px;
           ">
-            <p style="font-size: 1.2rem; font-weight: bold; color: var(--color-accent-secondary); margin: 0;">${this._mission.title}</p>
-            <p style="font-size: 1rem; opacity: 0.9; margin-top: 4px;">${this._mission.desc}</p>
+            <p style="font-size: 1.2rem; font-weight: bold; color: var(--color-accent-secondary); margin: 0;">${
+              this._mission.title
+            }</p>
+            <p style="font-size: 1rem; opacity: 0.9; margin-top: 4px;">${
+              this._mission.desc
+            }</p>
           </div>
-          ${this._mode === 'immergo_teacher' ? `
+          ${
+            this._mode === "immergo_teacher"
+              ? `
           <div style="
             margin-top: var(--spacing-lg); 
             font-size: 0.9rem; 
@@ -92,21 +104,31 @@ class ViewChat extends HTMLElement {
           ">
             <span>You can ask for <strong>translations</strong> & <strong>explanations</strong> at any time.</span>
           </div>
-          ` : ''}
+          `
+              : ""
+          }
         </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: ${this._mode === 'immergo_teacher' ? 'space-between' : 'center'}; width: 100%; gap: ${this._mode === 'immergo_teacher' ? '10px' : '40px'};">
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: ${
+          this._mode === "immergo_teacher" ? "space-between" : "center"
+        }; width: 100%; gap: ${
+      this._mode === "immergo_teacher" ? "10px" : "40px"
+    };">
           <!-- Model Visualizer (Top) -->
           <div style="width: 100%; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
              <audio-visualizer id="model-viz"></audio-visualizer>
           </div>
           
           <!-- Transcript (Middle) -->
-          ${this._mode === 'immergo_teacher' ? `
+          ${
+            this._mode === "immergo_teacher"
+              ? `
             <div style="width: 100%; height: 250px; margin: 10px 0; position: relative;">
               <live-transcript></live-transcript>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
 
           <!-- User Visualizer (Bottom) -->
            <div style="width: 100%; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -184,221 +206,249 @@ class ViewChat extends HTMLElement {
       </div>
     `;
 
-        const rateLimitDialog = this.querySelector('#rate-limit-dialog');
-        const closeRateLimitBtn = this.querySelector('#close-rate-limit');
+    const rateLimitDialog = this.querySelector("#rate-limit-dialog");
+    const closeRateLimitBtn = this.querySelector("#close-rate-limit");
 
-        closeRateLimitBtn.addEventListener('click', () => {
-            rateLimitDialog.classList.add('hidden');
-            rateLimitDialog.style.display = 'none';
-        });
+    closeRateLimitBtn.addEventListener("click", () => {
+      rateLimitDialog.classList.add("hidden");
+      rateLimitDialog.style.display = "none";
+    });
 
-        // Helper to perform navigation
-        const doEndSession = () => {
-            // Cleanup Gemini session
-            if (this.audioStreamer) this.audioStreamer.stop();
-            if (this.client) this.client.disconnect();
-            if (this.audioPlayer) this.audioPlayer.interrupt(); // Stop playback
+    // Helper to perform navigation
+    const doEndSession = () => {
+      // Cleanup Gemini session
+      if (this.audioStreamer) this.audioStreamer.stop();
+      if (this.client) this.client.disconnect();
+      if (this.audioPlayer) this.audioPlayer.interrupt(); // Stop playback
 
-            // Disconnect visualizers
-            const userViz = this.querySelector('#user-viz');
-            const modelViz = this.querySelector('#model-viz');
-            if (userViz && userViz.disconnect) userViz.disconnect();
-            if (modelViz && modelViz.disconnect) modelViz.disconnect();
+      // Disconnect visualizers
+      const userViz = this.querySelector("#user-viz");
+      const modelViz = this.querySelector("#model-viz");
+      if (userViz && userViz.disconnect) userViz.disconnect();
+      if (modelViz && modelViz.disconnect) modelViz.disconnect();
 
-            console.log("👋 [App] Session ended by user");
+      console.log("👋 [App] Session ended by user");
 
-            // Incomplete session
-            const result = {
-                incomplete: true
-            };
+      // Incomplete session
+      const result = {
+        incomplete: true,
+      };
 
-            this.dispatchEvent(new CustomEvent('navigate', {
-                bubbles: true,
-                detail: { view: 'summary', result: result }
-            }));
+      this.dispatchEvent(
+        new CustomEvent("navigate", {
+          bubbles: true,
+          detail: { view: "summary", result: result },
+        })
+      );
+    };
+
+    // Back Button
+    const backBtn = this.querySelector("#back-to-missions");
+    backBtn.addEventListener("click", () => {
+      // Stop session if active
+      if (this.audioStreamer) this.audioStreamer.stop();
+      if (this.client) this.client.disconnect();
+      if (this.audioPlayer) this.audioPlayer.interrupt();
+
+      const userViz = this.querySelector("#user-viz");
+      const modelViz = this.querySelector("#model-viz");
+      if (userViz && userViz.disconnect) userViz.disconnect();
+      if (modelViz && modelViz.disconnect) modelViz.disconnect();
+
+      // Navigate back to mission selector
+      this.dispatchEvent(
+        new CustomEvent("navigate", {
+          bubbles: true,
+          detail: { view: "mission-selector" },
+        })
+      );
+    });
+
+    // Animate visualizer on click
+    const userViz = this.querySelector("#user-viz");
+    const modelViz = this.querySelector("#model-viz");
+    const micBtn = this.querySelector("#mic-btn");
+    const statusEl = this.querySelector("#connection-status");
+    let isSpeaking = false;
+
+    // Initialize Gemini Live
+    this.client = new GeminiLiveAPI();
+    this.audioStreamer = new AudioStreamer(this.client);
+    this.audioPlayer = new AudioPlayer();
+
+    // Define Mission Complete Tool
+    const completeMissionTool = new FunctionCallDefinition(
+      "complete_mission",
+      "Call this tool when the user has successfully completed the mission objective. Provide a score and feedback.",
+      {
+        type: "OBJECT",
+        properties: {
+          score: {
+            type: "INTEGER",
+            description:
+              "Rating from 1 to 3 based on performance: 1 (Tiro) = Struggled, used frequent English, or needed many hints. 2 (Proficiens) = Good, intelligible but with errors or hesitation. 3 (Peritus) = Excellent, fluent, native-like, no help needed.",
+          },
+          feedback_pointers: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description:
+              "List of 3 constructive feedback points or compliments in English.",
+          },
+        },
+        required: ["score", "feedback_pointers"],
+      },
+      ["score", "feedback_pointers"]
+    );
+
+    completeMissionTool.functionToCall = (args) => {
+      console.log("🏆 [App] Mission Complete Tool Triggered!", args);
+
+      // Play winner sound immediately
+      const winnerSound = new Audio("/winner-bell.mp3");
+      winnerSound.volume = 0.6;
+      winnerSound
+        .play()
+        .catch((e) => console.error("Failed to play winner sound:", e));
+
+      // Map score to level
+      const levels = { 1: "Tiro", 2: "Proficiens", 3: "Peritus" };
+      const level = levels[args.score] || "Proficiens";
+
+      console.log(
+        "⏳ [App] Waiting for final audio to play before ending session..."
+      );
+
+      // Delay cleanup to allow the agent's congratulatory message to be heard
+      setTimeout(() => {
+        // Cleanup
+        if (this.audioStreamer) this.audioStreamer.stop();
+        if (this.client) this.client.disconnect();
+        if (this.audioPlayer) this.audioPlayer.interrupt();
+
+        // Navigate to summary
+        const result = {
+          score: args.score.toString(),
+          level: level,
+          notes: args.feedback_pointers,
         };
 
-        // Back Button
-        const backBtn = this.querySelector('#back-to-missions');
-        backBtn.addEventListener('click', () => {
-            // Stop session if active
-            if (this.audioStreamer) this.audioStreamer.stop();
-            if (this.client) this.client.disconnect();
-            if (this.audioPlayer) this.audioPlayer.interrupt();
-
-            const userViz = this.querySelector('#user-viz');
-            const modelViz = this.querySelector('#model-viz');
-            if (userViz && userViz.disconnect) userViz.disconnect();
-            if (modelViz && modelViz.disconnect) modelViz.disconnect();
-
-            // Navigate back to mission selector
-            this.dispatchEvent(new CustomEvent('navigate', {
-                bubbles: true,
-                detail: { view: 'mission-selector' }
-            }));
-        });
-
-        // Animate visualizer on click
-        const userViz = this.querySelector('#user-viz');
-        const modelViz = this.querySelector('#model-viz');
-        const micBtn = this.querySelector('#mic-btn');
-        const statusEl = this.querySelector('#connection-status');
-        let isSpeaking = false;
-
-        // Initialize Gemini Live
-        this.client = new GeminiLiveAPI();
-        this.audioStreamer = new AudioStreamer(this.client);
-        this.audioPlayer = new AudioPlayer();
-
-        // Define Mission Complete Tool
-        const completeMissionTool = new FunctionCallDefinition(
-            "complete_mission",
-            "Call this tool when the user has successfully completed the mission objective. Provide a score and feedback.",
-            {
-                type: "OBJECT",
-                properties: {
-                    score: {
-                        type: "INTEGER",
-                        description: "Rating from 1 to 3 based on performance: 1 (Tiro) = Struggled, used frequent English, or needed many hints. 2 (Proficiens) = Good, intelligible but with errors or hesitation. 3 (Peritus) = Excellent, fluent, native-like, no help needed."
-                    },
-                    feedback_pointers: {
-                        type: "ARRAY",
-                        items: { type: "STRING" },
-                        description: "List of 3 constructive feedback points or compliments in English."
-                    }
-                },
-                required: ["score", "feedback_pointers"]
-            },
-            ["score", "feedback_pointers"]
+        this.dispatchEvent(
+          new CustomEvent("navigate", {
+            bubbles: true,
+            detail: { view: "summary", result: result },
+          })
         );
+      }, 2500); // 2.5 seconds delay
+    };
 
-        completeMissionTool.functionToCall = (args) => {
-            console.log("🏆 [App] Mission Complete Tool Triggered!", args);
+    this.client.addFunction(completeMissionTool);
 
-            // Play winner sound immediately
-            const winnerSound = new Audio('/winner-bell.mp3');
-            winnerSound.volume = 0.6;
-            winnerSound.play().catch(e => console.error("Failed to play winner sound:", e));
+    // Setup client callbacks for logging
+    this.client.onConnectionStarted = () => {
+      console.log("🚀 [Gemini] Connection started");
+    };
 
-            // Map score to level
-            const levels = { 1: 'Tiro', 2: 'Proficiens', 3: 'Peritus' };
-            const level = levels[args.score] || 'Proficiens';
+    this.client.onOpen = () => {
+      console.log("🔓 [Gemini] WebSocket connection opened");
+    };
 
-            console.log("⏳ [App] Waiting for final audio to play before ending session...");
+    this.client.onReceiveResponse = (response) => {
+      console.log("📥 [Gemini] Received response:", response.type);
+      if (response.type === MultimodalLiveResponseType.AUDIO) {
+        this.audioPlayer.play(response.data);
+      } else if (response.type === MultimodalLiveResponseType.TURN_COMPLETE) {
+        console.log("✅ [Gemini] Turn complete");
+        const transcriptEl = this.querySelector("live-transcript");
+        if (transcriptEl) {
+          transcriptEl.finalizeAll();
+        }
+      } else if (response.type === MultimodalLiveResponseType.TOOL_CALL) {
+        console.log("🛠️ [Gemini] Tool Call received:", response.data);
+        if (response.data.functionCalls) {
+          response.data.functionCalls.forEach((fc) => {
+            this.client.callFunction(fc.name, fc.args);
+          });
+        }
+      } else if (
+        response.type === MultimodalLiveResponseType.INPUT_TRANSCRIPTION
+      ) {
+        const transcriptEl = this.querySelector("live-transcript");
+        if (transcriptEl) {
+          transcriptEl.addInputTranscript(
+            response.data.text,
+            response.data.finished
+          );
+        }
+      } else if (
+        response.type === MultimodalLiveResponseType.OUTPUT_TRANSCRIPTION
+      ) {
+        const transcriptEl = this.querySelector("live-transcript");
+        if (transcriptEl) {
+          transcriptEl.addOutputTranscript(
+            response.data.text,
+            response.data.finished
+          );
+        }
+      }
+    };
 
-            // Delay cleanup to allow the agent's congratulatory message to be heard
-            setTimeout(() => {
-                // Cleanup
-                if (this.audioStreamer) this.audioStreamer.stop();
-                if (this.client) this.client.disconnect();
-                if (this.audioPlayer) this.audioPlayer.interrupt();
+    this.client.onError = (error) => {
+      console.error("❌ [Gemini] Error:", error);
+    };
 
-                // Navigate to summary
-                const result = {
-                    score: args.score.toString(),
-                    level: level,
-                    notes: args.feedback_pointers
-                };
+    this.client.onClose = () => {
+      console.log("🔒 [Gemini] Connection closed");
+    };
 
-                this.dispatchEvent(new CustomEvent('navigate', {
-                    bubbles: true,
-                    detail: { view: 'summary', result: result }
-                }));
-            }, 2500); // 2.5 seconds delay
-        };
+    micBtn.addEventListener("click", async () => {
+      isSpeaking = !isSpeaking;
+      micBtn.style.background = isSpeaking
+        ? "#2c2c2c"
+        : "var(--color-accent-primary)";
 
-        this.client.addFunction(completeMissionTool);
-
-        // Setup client callbacks for logging
-        this.client.onConnectionStarted = () => {
-            console.log("🚀 [Gemini] Connection started");
-        };
-
-        this.client.onOpen = () => {
-            console.log("🔓 [Gemini] WebSocket connection opened");
-        };
-
-        this.client.onReceiveResponse = (response) => {
-            console.log("📥 [Gemini] Received response:", response.type);
-            if (response.type === MultimodalLiveResponseType.AUDIO) {
-                this.audioPlayer.play(response.data);
-            } else if (response.type === MultimodalLiveResponseType.TURN_COMPLETE) {
-                console.log("✅ [Gemini] Turn complete");
-                const transcriptEl = this.querySelector('live-transcript');
-                if (transcriptEl) {
-                    transcriptEl.finalizeAll();
-                }
-            } else if (response.type === MultimodalLiveResponseType.TOOL_CALL) {
-                console.log("🛠️ [Gemini] Tool Call received:", response.data);
-                if (response.data.functionCalls) {
-                    response.data.functionCalls.forEach(fc => {
-                        this.client.callFunction(fc.name, fc.args);
-                    });
-                }
-            } else if (response.type === MultimodalLiveResponseType.INPUT_TRANSCRIPTION) {
-                const transcriptEl = this.querySelector('live-transcript');
-                if (transcriptEl) {
-                    transcriptEl.addInputTranscript(response.data.text, response.data.finished);
-                }
-            } else if (response.type === MultimodalLiveResponseType.OUTPUT_TRANSCRIPTION) {
-                const transcriptEl = this.querySelector('live-transcript');
-                if (transcriptEl) {
-                    transcriptEl.addOutputTranscript(response.data.text, response.data.finished);
-                }
-            }
-        };
-
-        this.client.onError = (error) => {
-            console.error("❌ [Gemini] Error:", error);
-        };
-
-        this.client.onClose = () => {
-            console.log("🔒 [Gemini] Connection closed");
-        };
-
-        micBtn.addEventListener('click', async () => {
-            isSpeaking = !isSpeaking;
-            micBtn.style.background = isSpeaking ? '#2c2c2c' : 'var(--color-accent-primary)';
-
-            if (isSpeaking) {
-                // Change to Stop/Listening state
-                micBtn.innerHTML = `
+      if (isSpeaking) {
+        // Change to Stop/Listening state
+        micBtn.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
                     <span style="margin-left: 8px;">End Mission</span>
                 `;
-                micBtn.style.flexDirection = 'row';
-                micBtn.style.background = 'var(--color-danger)'; // Red for end
-            } else {
-                // Was active, so stopping now
-                doEndSession();
-                return; // Stop here, don't execute start logic
-            }
+        micBtn.style.flexDirection = "row";
+        micBtn.style.background = "var(--color-danger)"; // Red for end
+      } else {
+        // Was active, so stopping now
+        doEndSession();
+        return; // Stop here, don't execute start logic
+      }
 
-            if (isSpeaking) {
-                console.log("🎙️ [App] Microphone button clicked: Starting session...");
-                statusEl.textContent = "Connecting...";
-                statusEl.style.color = "var(--color-text-sub)";
-                // Viz active handled by connection now
+      if (isSpeaking) {
+        console.log("🎙️ [App] Microphone button clicked: Starting session...");
+        statusEl.textContent = "Connecting...";
+        statusEl.style.color = "var(--color-text-sub)";
+        // Viz active handled by connection now
 
-                try {
+        try {
+          // 0. Configure System Instructions
+          const language = this._language || "French";
+          const fromLanguage = this._fromLanguage || "English";
+          const mode = this._mode || "immergo_immersive";
+          const missionTitle = this._mission
+            ? this._mission.title
+            : "General Conversation";
+          const missionDesc = this._mission ? this._mission.desc : "";
+          const targetRole = this._mission
+            ? this._mission.target_role || "a local native speaker"
+            : "a conversational partner";
 
-                    // 0. Configure System Instructions
-                    const language = this._language || "French";
-                    const fromLanguage = this._fromLanguage || "English";
-                    const mode = this._mode || "immergo_immersive";
-                    const missionTitle = this._mission ? this._mission.title : "General Conversation";
-                    const missionDesc = this._mission ? this._mission.desc : "";
-                    const targetRole = this._mission ? (this._mission.target_role || "a local native speaker") : "a conversational partner";
+          let systemInstruction = "";
 
-                    let systemInstruction = "";
-
-                    if (mode === 'immergo_teacher') {
-                        // Teacher Mode Prompt
-                        systemInstruction = `
+          if (mode === "immergo_teacher") {
+            // Teacher Mode Prompt
+            systemInstruction = `
 ROLEPLAY INSTRUCTION:
 You are acting as **${targetRole}**, a native speaker of ${language}.
 The user is a language learner (native speaker of ${fromLanguage}) trying to: "${missionTitle}" (${missionDesc}).
 Your goal is to be a HELPFUL TEACHER while playing your role (${targetRole}).
+Speak in the accent and tone of the role.
 
 INTERACTION GUIDELINES:
 1. Act as the person, but if the user struggles, friendly explains options in their native language (${fromLanguage}).
@@ -413,13 +463,14 @@ When the user has successfully achieved the mission objective declared in the sc
 3. IMPORTANT: Set 'score' to 0 (Zero) to indicate this was a practice session.
 4. Provide 3 helpful tips or vocabulary words they learned in the feedback list (in ${fromLanguage}).
 `;
-                    } else {
-                        // Immersive Mode Prompt (Default)
-                        systemInstruction = `
+          } else {
+            // Immersive Mode Prompt (Default)
+            systemInstruction = `
 ROLEPLAY INSTRUCTION:
 You are acting as **${targetRole}**, a native speaker of ${language}.
 The user is a language learner (native speaker of ${fromLanguage}) trying to: "${missionTitle}" (${missionDesc}).
 Your goal is to play your role (${targetRole}) naturally. Do not act as an AI assistant. Act as the person.
+Speak in the accent and tone of the role.
 
 INTERACTION GUIDELINES:
 1. It is up to you if you want to directly speak back, or speak out what you think the user is saying in your native language before responding.
@@ -441,118 +492,129 @@ When the user has successfully achieved the mission objective declared in the sc
 3. Assign a score based on strict criteria: 1 for struggling/English reliance (Tiro), 2 for capable but imperfect (Proficiens), 3 for native-level fluency (Peritus).
 4. Provide 3 specific pointers or compliments in the feedback list (in the user's native language: ${fromLanguage}).
 `;
-                    }
+          }
 
-                    console.log("📝 [App] Setting system instructions for", language, "Mode:", mode);
-                    this.client.setSystemInstructions(systemInstruction);
+          console.log(
+            "📝 [App] Setting system instructions for",
+            language,
+            "Mode:",
+            mode
+          );
+          this.client.setSystemInstructions(systemInstruction);
 
-                    // Configure Transcription based on Mode
-                    if (mode === 'immergo_teacher') {
-                        this.client.setInputAudioTranscription(true);
-                        this.client.setOutputAudioTranscription(true);
-                    } else {
-                        this.client.setInputAudioTranscription(false);
-                        this.client.setOutputAudioTranscription(false);
-                    }
+          // Configure Transcription based on Mode
+          if (mode === "immergo_teacher") {
+            this.client.setInputAudioTranscription(true);
+            this.client.setOutputAudioTranscription(true);
+          } else {
+            this.client.setInputAudioTranscription(false);
+            this.client.setOutputAudioTranscription(false);
+          }
 
-                    // 1. Connect to WebSocket
-                    console.log("🔌 [App] Connecting to backend...");
+          // 1. Connect to WebSocket
+          console.log("🔌 [App] Connecting to backend...");
 
-                    // Execute Recaptcha
-                    let token = '';
-                    try {
-                        token = await this.getRecaptchaToken();
-                        console.log("Captcha solved:", token);
-                    } catch (err) {
-                        console.error("Recaptcha failed:", err);
-                        // Start without token? Or fail? The server will reject it. 
-                        // Let's proceed and let server reject if needed, or stop.
-                        // For now, let's stop to be safe.
-                        isSpeaking = false;
-                        micBtn.style.background = 'var(--color-accent-primary)';
-                        userViz.disconnect();
-                        modelViz.disconnect();
-                        statusEl.textContent = "";
-                        return;
-                    }
+          // Execute Recaptcha
+          let token = "";
+          try {
+            token = await this.getRecaptchaToken();
+            console.log("Captcha solved:", token);
+          } catch (err) {
+            console.error("Recaptcha failed:", err);
+            // Start without token? Or fail? The server will reject it.
+            // Let's proceed and let server reject if needed, or stop.
+            // For now, let's stop to be safe.
+            isSpeaking = false;
+            micBtn.style.background = "var(--color-accent-primary)";
+            userViz.disconnect();
+            modelViz.disconnect();
+            statusEl.textContent = "";
+            return;
+          }
 
-                    await this.client.connect(token);
+          await this.client.connect(token);
 
-                    // 2. Start Audio Stream
-                    console.log("🎤 [App] Starting audio stream...");
-                    await this.audioStreamer.start();
+          // 2. Start Audio Stream
+          console.log("🎤 [App] Starting audio stream...");
+          await this.audioStreamer.start();
 
-                    // Connect User Visualizer
-                    if (this.audioStreamer.audioContext && this.audioStreamer.source) {
-                        userViz.connect(this.audioStreamer.audioContext, this.audioStreamer.source);
-                    }
+          // Connect User Visualizer
+          if (this.audioStreamer.audioContext && this.audioStreamer.source) {
+            userViz.connect(
+              this.audioStreamer.audioContext,
+              this.audioStreamer.source
+            );
+          }
 
-                    // 3. Initialize Audio Player
-                    console.log("🔊 [App] Initializing audio player...");
-                    await this.audioPlayer.init();
+          // 3. Initialize Audio Player
+          console.log("🔊 [App] Initializing audio player...");
+          await this.audioPlayer.init();
 
-                    // Connect Model Visualizer
-                    if (this.audioPlayer.audioContext && this.audioPlayer.gainNode) {
-                        modelViz.connect(this.audioPlayer.audioContext, this.audioPlayer.gainNode);
-                    }
+          // Connect Model Visualizer
+          if (this.audioPlayer.audioContext && this.audioPlayer.gainNode) {
+            modelViz.connect(
+              this.audioPlayer.audioContext,
+              this.audioPlayer.gainNode
+            );
+          }
 
-                    console.log("✨ [App] Session active!");
-                    statusEl.textContent = "Connected and ready to speak";
-                    statusEl.style.color = "#4CAF50"; // Success green
+          console.log("✨ [App] Session active!");
+          statusEl.textContent = "Connected and ready to speak";
+          statusEl.style.color = "#4CAF50"; // Success green
 
-                    // Play start sound
-                    const startSound = new Audio('/start-bell.mp3');
-                    startSound.volume = 0.6;
-                    startSound.play().catch(e => console.error("Failed to play start sound:", e));
+          // Play start sound
+          const startSound = new Audio("/start-bell.mp3");
+          startSound.volume = 0.6;
+          startSound
+            .play()
+            .catch((e) => console.error("Failed to play start sound:", e));
+        } catch (err) {
+          console.error("❌ [App] Failed to start session:", err);
+          console.log("Error status:", err.status); // Debug status
 
-                } catch (err) {
-                    console.error("❌ [App] Failed to start session:", err);
-                    console.log("Error status:", err.status); // Debug status
-
-                    isSpeaking = false;
-                    micBtn.style.background = 'var(--color-accent-primary)';
-                    // Reset button content to "Start Mission"
-                    micBtn.innerHTML = `
+          isSpeaking = false;
+          micBtn.style.background = "var(--color-accent-primary)";
+          // Reset button content to "Start Mission"
+          micBtn.innerHTML = `
                         <span style="font-size: 1.2rem; font-weight: bold; margin-bottom: 4px;">Start Mission</span>
                         <span style="font-size: 0.8rem; opacity: 0.9;">You start the conversation!</span>
                     `;
-                    micBtn.style.flexDirection = 'column';
+          micBtn.style.flexDirection = "column";
 
-                    userViz.disconnect();
-                    modelViz.disconnect();
-                    statusEl.textContent = "";
+          userViz.disconnect();
+          modelViz.disconnect();
+          statusEl.textContent = "";
 
-                    if (err.status === 429) {
-                        rateLimitDialog.classList.remove('hidden');
-                        rateLimitDialog.style.display = 'flex';
-                    } else {
-                        alert("Failed to start session: " + err.message);
-                    }
-                }
+          if (err.status === 429) {
+            rateLimitDialog.classList.remove("hidden");
+            rateLimitDialog.style.display = "flex";
+          } else {
+            alert("Failed to start session: " + err.message);
+          }
+        }
+      }
+    });
+  }
 
-            }
-        });
-    }
-
-    async getRecaptchaToken() {
-        return new Promise((resolve, reject) => {
-            if (typeof grecaptcha === 'undefined') {
-                reject(new Error("Recaptcha not loaded"));
-                return;
-            }
-            grecaptcha.enterprise.ready(async () => {
-                try {
-                    const t = await grecaptcha.enterprise.execute(
-                        "6LeSYx8sAAAAAGdRAp8VQ2K9I-KYGWBykzayvQ8n",
-                        { action: "LOGIN" }
-                    );
-                    resolve(t);
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        });
-    }
+  async getRecaptchaToken() {
+    return new Promise((resolve, reject) => {
+      if (typeof grecaptcha === "undefined") {
+        reject(new Error("Recaptcha not loaded"));
+        return;
+      }
+      grecaptcha.enterprise.ready(async () => {
+        try {
+          const t = await grecaptcha.enterprise.execute(
+            "6LeSYx8sAAAAAGdRAp8VQ2K9I-KYGWBykzayvQ8n",
+            { action: "LOGIN" }
+          );
+          resolve(t);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+  }
 }
 
-customElements.define('view-chat', ViewChat);
+customElements.define("view-chat", ViewChat);
