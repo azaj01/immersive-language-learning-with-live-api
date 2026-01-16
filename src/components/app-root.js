@@ -36,8 +36,16 @@ class AppRoot extends HTMLElement {
         this.innerHTML = '';
 
         // Theme State
-        this.themes = ['dark', 'light'];
-        this.currentTheme = localStorage.getItem('theme') || 'dark';
+        this.themes = ['dark', 'light', 'system'];
+        this.currentTheme = localStorage.getItem('theme') || 'system';
+
+        // System Theme Listener
+        this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        this.mediaQuery.addEventListener('change', () => {
+            if (this.currentTheme === 'system') {
+                this.applyTheme('system');
+            }
+        });
 
         // Initial Theme Application
         this.applyTheme(this.currentTheme);
@@ -143,7 +151,12 @@ class AppRoot extends HTMLElement {
     }
 
     applyTheme(theme) {
-        this.setLightMode(theme === 'light');
+        if (theme === 'system') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            this.setLightMode(!prefersDark);
+        } else {
+            this.setLightMode(theme === 'light');
+        }
     }
 
     setLightMode(isLight) {
@@ -155,7 +168,13 @@ class AppRoot extends HTMLElement {
     }
 
     cycleTheme() {
-        this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+        // Cycle: Dark -> Light -> System -> Dark
+        const modes = ['dark', 'light', 'system'];
+        const currentIdx = modes.indexOf(this.currentTheme);
+        // Handle case where currentTheme might be invalid or old
+        const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % modes.length;
+
+        this.currentTheme = modes[nextIdx];
         localStorage.setItem('theme', this.currentTheme);
         this.applyTheme(this.currentTheme);
         this.updateThemeBtnIcon();
@@ -175,6 +194,10 @@ class AppRoot extends HTMLElement {
             case 'dark':
                 icon = '🌙'; // Moon
                 title = 'Dark Mode';
+                break;
+            case 'system':
+                icon = '💻'; // Laptop/System
+                title = 'System Default';
                 break;
         }
 
