@@ -58,11 +58,7 @@ class AppRoot extends HTMLElement {
             align-items: center;
             padding: var(--spacing-sm) var(--spacing-md);
             gap: var(--spacing-md);
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            z-index: 1000;
             pointer-events: none; /* Let clicks pass through to underlying elements if needed, but buttons need pointer-events: auto */
         `;
 

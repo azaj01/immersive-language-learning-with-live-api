@@ -43,7 +43,7 @@ class ViewMissions extends HTMLElement {
             <option>🇷🇴 Romanian</option>
             <option>🇺🇦 Ukrainian</option>
             <option>🧑‍🔬 Science Jargon</option>
-  
+
     `;
 
     this.innerHTML = `
@@ -279,10 +279,10 @@ class ViewMissions extends HTMLElement {
     if (savedLang) {
       toSelect.value = savedLang;
     } else {
-      // Default practice to Spanish if first time to avoid English/English default
+      // Default practice to French if first time to avoid English/English default
       const options = Array.from(toSelect.options);
-      const spanishOption = options.find(o => o.text.includes('Spanish'));
-      if (spanishOption) toSelect.value = spanishOption.text;
+      const frenchOption = options.find(o => o.text.includes('French'));
+      if (frenchOption) toSelect.value = frenchOption.text;
     }
 
     // Default From language to English if not set
@@ -407,11 +407,6 @@ class ViewMissions extends HTMLElement {
 
         const selectedToLang = toSelect.value;
         const selectedFromLang = fromSelect.value;
-
-        if (selectedToLang === selectedFromLang) {
-          alert(`Please select a different language to practice. You currently have both set to ${selectedToLang}.`);
-          return;
-        }
 
         // currentMode is defined in the closure above? No, it's local to connectedCallback.
         // We need to re-read it or make it accessible. Let's re-read from localStorage for simplicity and safety
